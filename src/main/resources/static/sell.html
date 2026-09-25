@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sell an Item | E-Exchange</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <nav class="navbar">
+
+        <div class="brand">
+            <div class="logo">E</div>
+            <span>E-Exchange</span>
+        </div>
+
+        <div class="nav-links">
+            <a href="dashboard.html">Home</a>
+            <a href="#">Buy</a>
+            <a href="sell.html" class="active">Sell</a>
+            <a href="my-listings.html">My Listings</a>
+        </div>
+
+        <div class="profile" id="profileBox">
+            <div class="profile-name" id="userName">User</div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <button id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+    </nav>
+
+    <main class="form-page">
+
+        <div class="form-card">
+
+            <h2>Sell an item</h2>
+            <p class="auth-subtitle">Add your phone or laptop details</p>
+
+            <form id="sellForm">
+
+                <div class="input-group">
+                    <label>Title</label>
+                    <input type="text" id="title" placeholder="e.g. iPhone 12 128GB" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Category</label>
+                        <select id="category" required>
+                            <option value="PHONE">Mobile Phone</option>
+                            <option value="LAPTOP">Laptop</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Brand</label>
+                        <input type="text" id="brand" placeholder="e.g. Apple, Dell">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="input-group">
+                        <label>Price (₹)</label>
+                        <input type="number" id="price" min="1" placeholder="e.g. 25000" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Condition</label>
+                        <select id="itemCondition">
+                            <option value="Like New">Like New</option>
+                            <option value="Good">Good</option>
+                            <option value="Fair">Fair</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Description</label>
+                    <textarea id="description" placeholder="Age of device, battery health, any issues, accessories included..."></textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Your phone number</label>
+                    <input type="tel" id="sellerPhone" placeholder="Buyers will contact you on this number" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Photo</label>
+                    <input type="file" id="photo" accept="image/*">
+                    <img id="preview" class="photo-preview" alt="Preview">
+                </div>
+
+                <div id="message"></div>
+
+                <button type="submit" class="auth-btn">
+                    List Item
+                    <span>→</span>
+                </button>
+
+            </form>
+
+        </div>
+
+    </main>
+
+</div>
+
+<script>
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        window.location.href = "login.html";
+    });
+
+    document.getElementById("profileBox").addEventListener("click", function (e) {
+        document.getElementById("profileDropdown").classList.toggle("open");
+        e.stopPropagation();
+    });
+
+    document.addEventListener("click", function () {
+        document.getElementById("profileDropdown").classList.remove("open");
+    });
+
+    const savedName = localStorage.getItem("userName");
+    const savedEmail = localStorage.getItem("userEmail");
+
+    if (!savedEmail) {
+        window.location.href = "login.html";
+    }
+
+    document.getElementById("userName").textContent = savedName || "User";
+
+    let imageData = "";
+    const preview = document.getElementById("preview");
+
+    document.getElementById("photo").addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+
+        reader.onload = function (ev) {
+            const img = new Image();
+
+            img.onload = function () {
+                const max = 800;
+                let w = img.width;
+                let h = img.height;
+
+                if (w > max) {
+                    h = Math.round(h * max / w);
+                    w = max;
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+
+                imageData = canvas.toDataURL("image/jpeg", 0.7);
+                preview.src = imageData;
+                preview.style.display = "block";
+            };
+
+            img.src = ev.target.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById("sellForm").addEventListener("submit", async function (event) {
+
+        event.preventDefault();
+
+        const message = document.getElementById("message");
+        message.textContent = "Listing your item...";
+        message.style.color = "#777";
+
+        const product = {
+            title: document.getElementById("title").value,
+            category: document.getElementById("category").value,
+            brand: document.getElementById("brand").value,
+            price: parseFloat(document.getElementById("price").value),
+            itemCondition: document.getElementById("itemCondition").value,
+            description: document.getElementById("description").value,
+            imageUrl: imageData,
+            sellerName: savedName,
+            sellerEmail: savedEmail,
+            sellerPhone: document.getElementById("sellerPhone").value
+        };
+
+        try {
+
+            const response = await fetch("/api/products", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(product)
+            });
+
+            if (response.ok) {
+
+                message.textContent = "Item listed successfully!";
+                message.style.color = "green";
+
+                setTimeout(() => {
+                    window.location.href = "dashboard.html";
+                }, 1200);
+
+            } else {
+
+                const result = await response.text();
+                message.textContent = result || ("Error " + response.status);
+                message.style.color = "#d33";
+
+            }
+
+        } catch (error) {
+
+            message.textContent = "Server connection failed.";
+            message.style.color = "#d33";
+
+        }
+
+    });
+</script>
+
+</body>
+</html>

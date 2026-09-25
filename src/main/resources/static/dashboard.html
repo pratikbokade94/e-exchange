@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>E-Exchange | Dashboard</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <nav class="navbar">
+
+        <div class="brand">
+            <div class="logo">E</div>
+            <span>E-Exchange</span>
+        </div>
+
+        <div class="nav-links">
+            <a href="dashboard.html" class="active">Home</a>
+            <a href="buy.html">Buy</a>
+            <a href="sell.html">Sell</a>
+            <a href="my-listings.html">My Listings</a>
+        </div>
+
+        <div class="profile" id="profileBox">
+            <div class="profile-name" id="userName">User</div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <button id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+    </nav>
+
+
+    <main>
+
+        <section class="hero">
+
+            <div class="hero-text">
+
+                <p class="small-title">WELCOME TO E-EXCHANGE</p>
+
+                <h1>
+                    Buy smart.<br>
+                    <span>Sell better.</span>
+                </h1>
+
+                <p>
+                    Find quality second-hand phones and laptops
+                    or give your old device a new home.
+                </p>
+
+                <div class="hero-buttons">
+
+                    <a href="buy.html" class="dark-btn">
+                        Browse Products →
+                    </a>
+
+                    <a href="sell.html" class="light-btn">
+                        Sell an Item
+                    </a>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="categories">
+
+            <div class="section-heading">
+                <div>
+                    <p class="small-title">EXPLORE</p>
+                    <h2>What are you looking for?</h2>
+                </div>
+            </div>
+            <div class="category-grid">
+
+                <a href="buy.html?category=PHONE" class="category-card">
+
+                    <div class="category-icon">📱</div>
+
+                    <div>
+                        <h3>Mobile Phones</h3>
+                        <p>Find pre-owned smartphones</p>
+                    </div>
+
+                    <span class="arrow">↗</span>
+
+                </a>
+
+
+                <a href="buy.html?category=LAPTOP" class="category-card">
+
+                    <div class="category-icon">💻</div>
+
+                    <div>
+                        <h3>Laptops</h3>
+                        <p>Explore quality second-hand laptops</p>
+                    </div>
+
+                    <span class="arrow">↗</span>
+
+                </a>
+
+            </div>
+
+
+
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script>
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        window.location.href = "login.html";
+    });
+
+    document.getElementById("profileBox").addEventListener("click", function (e) {
+        document.getElementById("profileDropdown").classList.toggle("open");
+        e.stopPropagation();
+    });
+
+    document.addEventListener("click", function () {
+        document.getElementById("profileDropdown").classList.remove("open");
+    });
+
+    const name = localStorage.getItem("userName");
+
+    if (name) {
+        document.getElementById("userName").textContent = name;
+    }
+</script>
+
+</body>
+</html>

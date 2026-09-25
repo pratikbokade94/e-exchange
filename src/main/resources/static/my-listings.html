@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Listings | E-Exchange</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <nav class="navbar">
+
+        <div class="brand">
+            <div class="logo">E</div>
+            <span>E-Exchange</span>
+        </div>
+
+        <div class="nav-links">
+            <a href="dashboard.html">Home</a>
+            <a href="buy.html">Buy</a>
+            <a href="sell.html">Sell</a>
+            <a href="my-listings.html" class="active">My Listings</a>
+        </div>
+
+        <div class="profile" id="profileBox">
+            <div class="profile-name" id="userName">User</div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <button id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+    </nav>
+
+    <main class="buy-page">
+
+        <div class="section-heading">
+            <p class="small-title">YOUR ITEMS</p>
+            <h2>My Listings</h2>
+        </div>
+
+        <div id="grid" class="product-grid" style="margin-top: 28px;"></div>
+
+    </main>
+
+</div>
+
+<div id="modal" class="modal-overlay">
+    <div class="modal">
+
+        <button class="modal-close" id="closeBtn">×</button>
+
+        <h2 class="modal-title">Edit item</h2>
+
+        <form id="editForm">
+
+            <div class="input-group">
+                <label>Title</label>
+                <input type="text" id="eTitle" required>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Category</label>
+                    <select id="eCategory">
+                        <option value="PHONE">Mobile Phone</option>
+                        <option value="LAPTOP">Laptop</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Brand</label>
+                    <input type="text" id="eBrand">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="input-group">
+                    <label>Price (₹)</label>
+                    <input type="number" id="ePrice" min="1" required>
+                </div>
+
+                <div class="input-group">
+                    <label>Condition</label>
+                    <select id="eCondition">
+                        <option value="Like New">Like New</option>
+                        <option value="Good">Good</option>
+                        <option value="Fair">Fair</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Description</label>
+                <textarea id="eDescription"></textarea>
+            </div>
+
+            <div class="input-group">
+                <label>Your phone number</label>
+                <input type="tel" id="ePhone" required>
+            </div>
+
+            <div class="input-group">
+                <label>New photo (optional, khaali chhodo to purani rahegi)</label>
+                <input type="file" id="ePhoto" accept="image/*">
+            </div>
+
+            <div id="editMessage"></div>
+
+            <button type="submit" class="auth-btn">Save Changes</button>
+
+        </form>
+
+    </div>
+</div>
+
+<div id="confirmModal" class="modal-overlay">
+    <div class="modal confirm-modal">
+
+        <h3>Delete this item?</h3>
+        <p>Ye listing hamesha ke liye hat jayegi aur wapas nahi aayegi.</p>
+
+        <div class="confirm-actions">
+            <button class="btn-cancel" id="cancelDeleteBtn">Cancel</button>
+            <button class="btn-confirm-delete" id="confirmDeleteBtn">Delete</button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        window.location.href = "login.html";
+    });
+
+    document.getElementById("profileBox").addEventListener("click", function (e) {
+        document.getElementById("profileDropdown").classList.toggle("open");
+        e.stopPropagation();
+    });
+
+    document.addEventListener("click", function () {
+        document.getElementById("profileDropdown").classList.remove("open");
+    });
+
+    const email = localStorage.getItem("userEmail");
+
+    if (!email) {
+        window.location.href = "login.html";
+    }
+
+    document.getElementById("userName").textContent = localStorage.getItem("userName") || "User";
+
+    const grid = document.getElementById("grid");
+    const modal = document.getElementById("modal");
+    const editMessage = document.getElementById("editMessage");
+
+    let products = [];
+    let editingId = null;
+    let newImage = "";
+
+    function esc(text) {
+        const d = document.createElement("div");
+        d.textContent = text == null ? "" : text;
+        return d.innerHTML;
+    }
+
+    function money(n) {
+        return "₹" + Number(n).toLocaleString("en-IN");
+    }
+
+    function imgHtml(p) {
+        if (p.imageUrl) {
+            return '<img class="product-img" src="' + p.imageUrl + '" alt="">';
+        }
+        return '<div class="product-noimg">' + (p.category === "LAPTOP" ? "💻" : "📱") + '</div>';
+    }
+
+    function render() {
+        if (products.length === 0) {
+            grid.innerHTML = '<p class="empty-state">You have not listed anything yet. <a href="sell.html"><strong>Sell an item</strong></a></p>';
+            return;
+        }
+
+        grid.innerHTML = products.map(p => {
+
+            const listedOn = p.createdAt
+                ? new Date(p.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                : "-";
+
+            return '<div class="product-card listing-card" data-id="' + p.id + '">' +
+                imgHtml(p) +
+                '<div class="product-info">' +
+                '<h3>' + esc(p.title) + '</h3>' +
+                '<p class="product-meta">Company: ' + esc(p.brand || "-") + ' · Condition: ' + esc(p.itemCondition || "-") + '</p>' +
+                '<p class="product-price">' + money(p.price) + '</p>' +
+                '<div class="listing-details">' +
+                '<p><strong>Description:</strong> ' + esc(p.description || "No description added.") + '</p>' +
+                '<p><strong>Category:</strong> ' + (p.category === "LAPTOP" ? "Laptop" : "Mobile Phone") + '</p>' +
+                '<p><strong>Contact number:</strong> ' + esc(p.sellerPhone || "-") + '</p>' +
+                '<p><strong>Listed on:</strong> ' + listedOn + '</p>' +
+                '</div>' +
+                '<div class="card-actions">' +
+                '<button class="btn-edit" data-action="edit">Edit</button>' +
+                '<button class="btn-delete" data-action="delete">Delete</button>' +
+                '</div>' +
+                '</div></div>';
+
+        }).join("");
+    }
+
+
+    async function load() {
+        try {
+            const res = await fetch("/api/products/my?email=" + encodeURIComponent(email));
+            products = await res.json();
+            render();
+        } catch (e) {
+            grid.innerHTML = '<p class="empty-state">Could not load your items.</p>';
+        }
+    }
+
+    const confirmModal = document.getElementById("confirmModal");
+    let deleteId = null;
+
+    grid.addEventListener("click", function (e) {
+        const btn = e.target.closest("button[data-action]");
+        if (!btn) return;
+
+        const card = btn.closest(".product-card");
+        const id = Number(card.dataset.id);
+
+        if (btn.dataset.action === "delete") {
+            deleteId = id;
+            confirmModal.classList.add("open");
+        } else {
+            openEdit(id);
+        }
+    });
+
+    document.getElementById("cancelDeleteBtn").addEventListener("click", function () {
+        confirmModal.classList.remove("open");
+        deleteId = null;
+    });
+
+    confirmModal.addEventListener("click", function (e) {
+        if (e.target === confirmModal) {
+            confirmModal.classList.remove("open");
+            deleteId = null;
+        }
+    });
+
+    document.getElementById("confirmDeleteBtn").addEventListener("click", async function () {
+        if (deleteId == null) return;
+
+        try {
+            const res = await fetch("/api/products/" + deleteId + "?email=" + encodeURIComponent(email), {
+                method: "DELETE"
+            });
+
+            confirmModal.classList.remove("open");
+
+            if (res.ok) {
+                load();
+            } else {
+                alert(await res.text() || ("Error " + res.status));
+            }
+        } catch (err) {
+            alert("Server connection failed.");
+        }
+
+        deleteId = null;
+    });
+
+    function openEdit(id) {
+        const p = products.find(x => x.id === id);
+        if (!p) return;
+
+        editingId = id;
+        newImage = "";
+        editMessage.textContent = "";
+
+        document.getElementById("eTitle").value = p.title || "";
+        document.getElementById("eCategory").value = p.category || "PHONE";
+        document.getElementById("eBrand").value = p.brand || "";
+        document.getElementById("ePrice").value = p.price;
+        document.getElementById("eCondition").value = p.itemCondition || "Good";
+        document.getElementById("eDescription").value = p.description || "";
+        document.getElementById("ePhone").value = p.sellerPhone || "";
+        document.getElementById("ePhoto").value = "";
+
+        modal.classList.add("open");
+    }
+
+    function closeModal() {
+        modal.classList.remove("open");
+    }
+
+    document.getElementById("closeBtn").addEventListener("click", closeModal);
+
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeModal();
+    });
+
+    document.getElementById("ePhoto").addEventListener("change", function (e) {
+        const file = e.target.files[0];
+        if (!file) {
+            newImage = "";
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = function (ev) {
+            const img = new Image();
+
+            img.onload = function () {
+                const max = 800;
+                let w = img.width;
+                let h = img.height;
+
+                if (w > max) {
+                    h = Math.round(h * max / w);
+                    w = max;
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+
+                newImage = canvas.toDataURL("image/jpeg", 0.7);
+            };
+
+            img.src = ev.target.result;
+        };
+
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById("editForm").addEventListener("submit", async function (event) {
+
+        event.preventDefault();
+
+        editMessage.textContent = "Saving...";
+        editMessage.style.color = "#777";
+
+        const payload = {
+            title: document.getElementById("eTitle").value,
+            category: document.getElementById("eCategory").value,
+            brand: document.getElementById("eBrand").value,
+            price: parseFloat(document.getElementById("ePrice").value),
+            itemCondition: document.getElementById("eCondition").value,
+            description: document.getElementById("eDescription").value,
+            sellerPhone: document.getElementById("ePhone").value,
+            imageUrl: newImage
+        };
+
+        try {
+            const res = await fetch("/api/products/" + editingId + "?email=" + encodeURIComponent(email), {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                closeModal();
+                load();
+            } else {
+                editMessage.textContent = await res.text() || ("Error " + res.status);
+                editMessage.style.color = "#d33";
+            }
+        } catch (err) {
+            editMessage.textContent = "Server connection failed.";
+            editMessage.style.color = "#d33";
+        }
+
+    });
+
+    load();
+</script>
+
+</body>
+</html>

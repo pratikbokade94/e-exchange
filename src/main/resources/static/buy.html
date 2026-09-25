@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy | E-Exchange</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <nav class="navbar">
+
+        <div class="brand">
+            <div class="logo">E</div>
+            <span>E-Exchange</span>
+        </div>
+
+        <div class="nav-links">
+            <a href="dashboard.html">Home</a>
+            <a href="buy.html" class="active">Buy</a>
+            <a href="sell.html">Sell</a>
+            <a href="my-listings.html">My Listings</a>
+        </div>
+
+        <div class="profile" id="profileBox">
+            <div class="profile-name" id="userName">User</div>
+            <div class="profile-dropdown" id="profileDropdown">
+                <button id="logoutBtn">Logout</button>
+            </div>
+        </div>
+
+    </nav>
+
+    <main class="buy-page">
+
+        <div class="section-heading">
+            <p class="small-title">BROWSE</p>
+            <h2>Second-hand phones and laptops</h2>
+        </div>
+
+        <div class="buy-toolbar">
+
+            <input type="text" id="search" class="search-box" placeholder="Search by name or brand...">
+
+            <div class="filter-chips">
+                <button class="chip active" data-cat="">All</button>
+                <button class="chip" data-cat="PHONE">Phones</button>
+                <button class="chip" data-cat="LAPTOP">Laptops</button>
+            </div>
+
+        </div>
+
+        <div id="grid" class="product-grid"></div>
+
+    </main>
+
+</div>
+
+<div id="modal" class="modal-overlay">
+    <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+
+    document.getElementById("logoutBtn").addEventListener("click", function () {
+        localStorage.removeItem("userName");
+        localStorage.removeItem("userEmail");
+        window.location.href = "login.html";
+    });
+
+    document.getElementById("profileBox").addEventListener("click", function (e) {
+        document.getElementById("profileDropdown").classList.toggle("open");
+        e.stopPropagation();
+    });
+
+    document.addEventListener("click", function () {
+        document.getElementById("profileDropdown").classList.remove("open");
+    });
+
+    if (!localStorage.getItem("userEmail")) {
+        window.location.href = "login.html";
+    }
+
+    document.getElementById("userName").textContent = localStorage.getItem("userName") || "User";
+
+    const params = new URLSearchParams(window.location.search);
+    let category = (params.get("category") || "").toUpperCase();
+    let products = [];
+
+    const grid = document.getElementById("grid");
+    const searchBox = document.getElementById("search");
+    const modal = document.getElementById("modal");
+    const modalBody = document.getElementById("modalBody");
+
+    function esc(text) {
+        const d = document.createElement("div");
+        d.textContent = text == null ? "" : text;
+        return d.innerHTML;
+    }
+
+    function money(n) {
+        return "₹" + Number(n).toLocaleString("en-IN");
+    }
+
+    function imgHtml(p, cls) {
+        if (p.imageUrl) {
+            return '<img class="' + cls + '" src="' + p.imageUrl + '" alt="">';
+        }
+        return '<div class="product-noimg">' + (p.category === "LAPTOP" ? "💻" : "📱") + '</div>';
+    }
+
+    function render() {
+        const q = searchBox.value.trim().toLowerCase();
+
+        const list = products.filter(p =>
+            !q ||
+            (p.title || "").toLowerCase().includes(q) ||
+            (p.brand || "").toLowerCase().includes(q)
+        );
+
+        if (list.length === 0) {
+            grid.innerHTML = '<p class="empty-state">No items found.</p>';
+            return;
+        }
+
+        grid.innerHTML = list.map(p =>
+            '<div class="product-card" data-id="' + p.id + '">' +
+            imgHtml(p, "product-img") +
+            '<div class="product-info">' +
+            '<h3>' + esc(p.title) + '</h3>' +
+            '<p class="product-meta">' + esc(p.brand || "") + (p.brand && p.itemCondition ? " · " : "") + esc(p.itemCondition || "") + '</p>' +
+            '<p class="product-price">' + money(p.price) + '</p>' +
+            '</div></div>'
+        ).join("");
+    }
+
+    async function load() {
+        const url = category ? "/api/products?category=" + category : "/api/products";
+
+        try {
+            const res = await fetch(url);
+            products = await res.json();
+            render();
+        } catch (e) {
+            grid.innerHTML = '<p class="empty-state">Could not load items.</p>';
+        }
+    }
+
+    function openModal(id) {
+        const p = products.find(x => x.id === id);
+        if (!p) return;
+
+        modalBody.innerHTML =
+            '<button class="modal-close" id="closeBtn">×</button>' +
+            imgHtml(p, "product-img") +
+            '<h2>' + esc(p.title) + '</h2>' +
+            '<p class="product-meta">Company: ' + esc(p.brand || "-") + ' · Condition: ' + esc(p.itemCondition || "-") + '</p>' +
+            '<p class="product-price">' + money(p.price) + '</p>' +
+            '<p class="modal-label">Description:</p>' +
+            '<p class="modal-desc">' + esc(p.description || "No description added.") + '</p>' +
+            '<div class="seller-box">' +
+            '<strong>Contact seller</strong><br>' +
+            'Name: ' + esc(p.sellerName || "-") + '<br>' +
+            'Phone: <a href="tel:' + esc(p.sellerPhone) + '">' + esc(p.sellerPhone || "-") + '</a><br>' +
+            'Email: <a href="mailto:' + esc(p.sellerEmail) + '">' + esc(p.sellerEmail || "-") + '</a>' +
+            '</div>';
+
+        modal.classList.add("open");
+        document.getElementById("closeBtn").addEventListener("click", closeModal);
+    }
+
+    function closeModal() {
+        modal.classList.remove("open");
+    }
+
+    grid.addEventListener("click", function (e) {
+        const card = e.target.closest(".product-card");
+        if (card) openModal(Number(card.dataset.id));
+    });
+
+    modal.addEventListener("click", function (e) {
+        if (e.target === modal) closeModal();
+    });
+
+    searchBox.addEventListener("input", render);
+
+    document.querySelectorAll(".chip").forEach(chip => {
+        chip.addEventListener("click", function () {
+            category = chip.dataset.cat;
+            setActiveChip();
+            load();
+        });
+    });
+
+    function setActiveChip() {
+        document.querySelectorAll(".chip").forEach(c =>
+            c.classList.toggle("active", c.dataset.cat === category)
+        );
+    }
+
+    setActiveChip();
+    load();
+</script>
+
+</body>
+</html>
